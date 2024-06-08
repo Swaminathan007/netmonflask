@@ -22,7 +22,7 @@ class CommandThread(threading.Thread):
         self._stop_event = threading.Event()
 
     def run(self):
-        commands = ["g++ capturesumma.c -lpcap -lcjson -lcurl -o cap.out", f"sudo ./cap.out {self.interface}"]
+        commands = ["g++ capture.c -lpcap -lcjson -lcurl -o cap.out", f"sudo ./cap.out {self.interface}"]
         for command in commands:
             result = subprocess.run(command, shell=True, capture_output=True, text=True)
             if self._stop_event.is_set():
