@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Add Rule{% endblock %}
+{% block content %}
+{% include "navbar.html" %}
+
+<div class="container p-4 mt-5">
+    <h1 class="h4 mb-4 fw-bold">Add Firewall Rule</h1>
+    <form id="addRuleForm" class="bg-white p-4 rounded shadow-sm">
+        <div class="mb-3">
+            <label for="rule" class="form-label">Rule</label>
+            <input type="text" id="rule" name="rule" class="form-control">
+        </div>
+        <button type="submit" class="btn btn-primary">Add Rule</button>
+    </form>
+    <div id="result" class="mt-4"></div>
+</div>
+<script>
+    document.getElementById('addRuleForm').addEventListener('submit', function (event) {
+        event.preventDefault();
+        const rule = document.getElementById('rule').value;
+        fetch('/addrule', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ rule: rule })
+        })
+            .then(response => response.json())
+            .then(data => {
+                const resultDiv = document.getElementById('result');
+                resultDiv.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+    });
+</script>
+{% endblock %}

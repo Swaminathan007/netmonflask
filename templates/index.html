@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Firewall Status{% endblock %}
+{% block content %}
+{%include "navbar.html"%}
+<div class="container mt-5">
+<div id="plot"></div>
+</div>
+    <script>
+        var data = [];
+        var diffs = [];
+        var layout = { title: 'Firewall' , 
+        xaxis: { type: 'date', tickformat: '%H:%M:%S' } ,
+        transition: { duration: 500, easing: 'cubic-in-out' }};
+        var config = { responsive: true };
+
+        var plotDiv = document.getElementById('plot');
+        var plot = Plotly.newPlot(plotDiv, [{ y: data }], layout, config);
+
+        var eventSource = new EventSource('/firewall_traffic');
+        eventSource.onmessage = function (event) {
+            data.push(parseInt(event.data));
+            if(data.length >= 2){
+                let diff = Math.abs([data.length-1] - data[data.length-2]);
+                console.log(diff);
+                diffs.push(diff);
+                Plotly.update(plotDiv, { y: [diffs] ,type: 'scatter'});
+            }
+        };
+    </script>
+{% endblock %}
