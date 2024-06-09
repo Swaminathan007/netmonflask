@@ -36,14 +36,6 @@ socketio = SocketIO(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
-
-OPNsense_API_URL = 'https://192.168.229.131'
-OPNsense_API_KEY = "nl7PdG0PiMBMelsy11A8oOpODUYD2nLDOqJihihpogB83I6rTr2oFr7cYEggSyvqTr3CvJ6zqZ2ZX08c"
-OPNsense_API_SECRET = "s/OMjoybJx0OTD/+l8V7lLOH4/NZ+B68qPsyW7OM2QAbo+QWPawewY8QgZ5G/TEfjH0Q/TGFhSLk7Q7A"
-auth = HTTPBasicAuth(OPNsense_API_KEY, OPNsense_API_SECRET)
-if not OPNsense_API_KEY or not OPNsense_API_SECRET:
-    raise ValueError("API Key and Secret must be set as environment variables.")
-# User model
 class User(UserMixin):
     def __init__(self, id, username, password):
         self.id = id
@@ -62,7 +54,7 @@ def load_user(user_id):
     return None
 
 
-OPNSENSE_HOST = "http://192.168.229.131"
+OPNSENSE_HOST = "http://192.168.98.131"
 API_KEY = "jrvyX2oH6Ofqp/7BHfC+3YyBq8YTU3PkcGSKKC6XabZGWKZ9OkDkzp8kUtdsxvKTZ60aw2OtcOXUEw5E"
 API_SECRET = "bz92B/FFBOWs1CNrweoJ3iV8N4tkA8Rdf3KMfqzj9lTJ3zMOMbPbqOn9H+TMs2M8e7k2ae7vt4fbsc5x"
 auth = (API_KEY, API_SECRET)
@@ -94,11 +86,6 @@ def random_data():
 @app.route('/addrule', methods=['GET', 'POST'])
 @login_required
 def add_rule():
-    if request.method == 'POST':
-        rule = request.json['rule']
-        # Add the rule to UFW
-        result = subprocess.run(['sudo', 'ufw', 'allow', rule], capture_output=True, text=True)
-        return jsonify({'result': result.stdout, 'error': result.stderr})
     return render_template('add_rule.html')
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -148,20 +135,6 @@ def viewliveinterface(interface):
     command_thread = CommandThread(interface)
     command_thread.start()
     return render_template("traffic.html", interface=interface)
-
-def tail_log():
-    log_file = '/var/log/ufw.log'
-    process = subprocess.Popen(['tail', '-f', log_file], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    while True:
-        line = process.stdout.readline().decode('utf-8').strip()
-        if line:
-            now = datetime.now()
-            current_second = int(now.timestamp())
-            if current_second not in log_count:
-                log_count[current_second] = 0
-                logs_per_second[current_second] = []
-            log_count[current_second] += 1
-            logs_per_second[current_second].append(line)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0',debug=True)
