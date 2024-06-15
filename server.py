@@ -61,28 +61,32 @@ auth = (API_KEY, API_SECRET)
 
 # Endpoint for interface statistics
 url = f"{OPNSENSE_HOST}/api/diagnostics/interface/getInterfaceStatistics"
-
-@app.route('/')
+@app.route("/")
 @login_required
-def index():
-    return render_template('index.html')
-def fetch_interface_statistics():
-    while True:
-        try:
-            response = requests.get(url, auth=auth, verify=False)
-            if response.status_code == 200:
-                data = response.json()
-                interface_stats = data.get("statistics", {}).get("[pflog0] / pflog0", {})
-                bytes = int(interface_stats.get("sent-bytes", 0))
-                yield f"data:{bytes}\n\n"
-            else:
-                yield f"data:0\n\n"
-        except Exception as e:
-            yield f"data:0\n\n"
-
-@app.route('/firewall_traffic')
-def random_data():
-    return Response(fetch_interface_statistics(), mimetype='text/event-stream')
+def home():
+    return render_template("index.html")
+@app.route("/get-interfaces")
+def get_interfaces():
+    packets_ps = requests.get(url,auth=(API_KEY,API_SECRET))
+    data = packets_ps.json()
+    interfaces = []
+    for interface in data['statistics']:
+        if('Loopback' not in interface and ':' not in interface):
+            interfaces.append(interface)
+    return jsonify({'interfaces':interfaces})
+@app.route('/firewalltraffic', methods=['GET'])
+def get_traffic_value():
+    try:
+        response = requests.get(url, auth=(API_KEY, API_SECRET))
+        data = response.json()
+        stats = data['statistics']
+        traffic_data = {}
+        for interface in stats:
+            if 'Loopback' not in interface and ':' not in interface:
+                traffic_data[interface] = stats[interface]['sent-bytes']  
+        return jsonify(traffic_data)
+    except Exception as e:
+        return jsonify(f"Error: {e}")
 @app.route('/addrule', methods=['GET', 'POST'])
 @login_required
 def add_rule():
@@ -100,7 +104,7 @@ def login():
         if user and check_password_hash(user[2], password):
             user_obj = User(id=user[0], username=user[1], password=user[2])
             login_user(user_obj)
-            return redirect(url_for('index'))
+            return redirect(url_for('home'))
         flash('Invalid username or password')
     return render_template('login.html')
 @app.route('/logout')

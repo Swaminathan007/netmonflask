@@ -2,31 +2,107 @@
 {% block title %}Firewall Status{% endblock %}
 {% block content %}
 {%include "navbar.html"%}
-<div class="container mt-5">
-    <div id="plot"></div>
+<div class="container mt-2">
+    <h2 class="mb-4">Interfaces Traffic</h2>
+        <div class="container d-flex align-items-center justify-content-center flex-row flex-wrap p-2 shadow rounded" id="charts-container">
+        </div>
 </div>
 </div>
 </div>
-    <script>
-        var data = [];
-        var diffs = [];
-        var layout = { title: 'Firewall' , 
-        xaxis: { type: 'date', tickformat: '%H:%M:%S' } ,
-        transition: { duration: 500, easing: 'cubic-in-out' }};
-        var config = { responsive: true };
 
-        var plotDiv = document.getElementById('plot');
-        var plot = Plotly.newPlot(plotDiv, [{ y: data }], layout, config);
-
-        var eventSource = new EventSource('/firewall_traffic');
-        eventSource.onmessage = function (event) {
-            data.push(parseInt(event.data));
-            if(data.length >= 2){
-                let diff = Math.abs([data.length-1] - data[data.length-2]);
-                console.log(diff);
-                diffs.push(diff);
-                Plotly.update(plotDiv, { y: [diffs] ,type: 'scatter'});
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var container = document.getElementById("charts-container");
+        async function fetchInterfaces() {
+            try {
+                const response = await fetch('/get-interfaces');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                const data = await response.json();
+                return data.interfaces;
+            } catch (error) {
+                console.error('Error fetching interfaces:', error);
+                return [];
             }
-        };
-    </script>
+        }
+
+        async function initialize() {
+            const interfaces = await fetchInterfaces();
+            console.log(interfaces);
+            const chartObjects = {};
+            interfaces.forEach((interface) => {
+                const chartId = `chart-${interface}`;
+                var new_div = document.createElement("div");
+                var heading = document.createElement("h2");
+                heading.innerText = interface;
+                new_div.id = chartId;
+                new_div.className = "shadow rounded p-1 m-1";
+                new_div.style.width = "25rem";
+                new_div.style.height = "100px";
+                container.appendChild(new_div);
+                const options = {
+                    chart: {
+                        height:200,
+                        type: 'line',
+                        animations: {
+                            enabled: true,
+                            easing: 'linear',
+                            dynamicAnimation: {
+                                speed: 1000
+                            }
+                        },
+                        toolbar: {
+                            show: false
+                        }
+                    },
+                    series: [{
+                        name: interface,
+                        data: []
+                    }],
+                    xaxis: {
+                        type: 'datetime',
+                        labels: {
+                            format: 'HH:mm:ss'
+                        },
+                        range: 10 * 1000 // 10 seconds
+                    },
+                    stroke: {
+                        curve: 'smooth'
+                    },
+                    yaxis: {
+                        min: 0,
+                        max: 2000000
+                    },
+                    legend: {
+                        show: true,
+                        position: 'top'
+                    },
+                    title:{
+                        text:interface
+                    }
+                };
+                const chart = new ApexCharts(document.getElementById(`${chartId}`), options);
+                chart.render();
+                chartObjects[interface] = chart;
+            });
+            function updateData() {
+                fetch('/firewalltraffic')
+                    .then(response => response.json())
+                    .then(data => {
+                        const currentTime = new Date().getTime();
+                        Object.keys(data).forEach(interface => {
+                            const newDataPoint = { x: currentTime, y: data[interface] };
+                            chartObjects[interface].appendData([{ data: [newDataPoint] }]);
+                        });
+                    })
+                    .catch(error => console.error('Error fetching traffic data:', error));
+                    setTimeout(updateData, 1000);
+            }
+            updateData();
+        }
+        initialize();
+    });
+</script>
+    
 {% endblock %}
