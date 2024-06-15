@@ -58,8 +58,8 @@ OPNSENSE_HOST = "http://192.168.98.131"
 API_KEY = "jrvyX2oH6Ofqp/7BHfC+3YyBq8YTU3PkcGSKKC6XabZGWKZ9OkDkzp8kUtdsxvKTZ60aw2OtcOXUEw5E"
 API_SECRET = "bz92B/FFBOWs1CNrweoJ3iV8N4tkA8Rdf3KMfqzj9lTJ3zMOMbPbqOn9H+TMs2M8e7k2ae7vt4fbsc5x"
 auth = (API_KEY, API_SECRET)
-
-# Endpoint for interface statistics
+sent_bytes = []
+interfaces = []
 url = f"{OPNSENSE_HOST}/api/diagnostics/interface/getInterfaceStatistics"
 @app.route("/")
 @login_required
@@ -67,12 +67,14 @@ def home():
     return render_template("index.html")
 @app.route("/get-interfaces")
 def get_interfaces():
+    global sent_bytes,interfaces
+    interfaces = []
     packets_ps = requests.get(url,auth=(API_KEY,API_SECRET))
     data = packets_ps.json()
-    interfaces = []
     for interface in data['statistics']:
         if('Loopback' not in interface and ':' not in interface):
             interfaces.append(interface)
+    sent_bytes = [[] for i in range(len(interfaces))]
     return jsonify({'interfaces':interfaces})
 @app.route('/firewalltraffic', methods=['GET'])
 def get_traffic_value():
@@ -81,9 +83,15 @@ def get_traffic_value():
         data = response.json()
         stats = data['statistics']
         traffic_data = {}
+        c = 0
         for interface in stats:
             if 'Loopback' not in interface and ':' not in interface:
-                traffic_data[interface] = stats[interface]['sent-bytes']  
+                sent_bytes[c].append(stats[interface]['sent-bytes'])
+                c+=1
+        if(len(sent_bytes[0]) >= 2):
+            for i in range(len(sent_bytes)):
+                l = len(sent_bytes[i])
+                traffic_data[interfaces[i]] = abs(sent_bytes[i][l-1]-sent_bytes[i][l-2])
         return jsonify(traffic_data)
     except Exception as e:
         return jsonify(f"Error: {e}")

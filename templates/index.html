@@ -72,7 +72,7 @@
                     },
                     yaxis: {
                         min: 0,
-                        max: 2000000
+                        max: 5000
                     },
                     legend: {
                         show: true,
@@ -93,7 +93,24 @@
                         const currentTime = new Date().getTime();
                         Object.keys(data).forEach(interface => {
                             const newDataPoint = { x: currentTime, y: data[interface] };
-                            chartObjects[interface].appendData([{ data: [newDataPoint] }]);
+                            const chart = chartObjects[interface];
+                            chart.appendData([{ data: [newDataPoint] }]);
+                            console.log(chart.series.w);
+                            //console.log(chart.w.globals);
+                            //const yValues = currentSeries.map(point => point.y);
+
+                            // Calculate new Y-axis min and max
+                            //const newMinY = Math.floor(Math.min(...yValues) * 0.9); // Add some padding below min
+                            //const newMaxY = Math.ceil(Math.max(...yValues) * 1.1);  // Add some padding above max
+
+                            // Update Y-axis dynamically
+                            /*chart.updateOptions({
+                                yaxis: {
+                                    min: newMinY,
+                                    max: newMaxY
+                                }
+                            });*/
+                            
                         });
                     })
                     .catch(error => console.error('Error fetching traffic data:', error));
