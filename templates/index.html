@@ -3,8 +3,8 @@
 {% block content %}
 {%include "navbar.html"%}
 <div class="container mt-2">
-    <h2 class="mb-4">Interfaces Traffic</h2>
-        <div class="container d-flex align-items-center justify-content-center flex-row flex-wrap p-2 shadow rounded" id="charts-container">
+    <h2 class="m-3">Interfaces Traffic</h2>
+        <div class="container d-flex align-items-center justify-content-center flex-row flex-wrap" id="charts-container">
         </div>
 </div>
 </div>
@@ -29,7 +29,6 @@
 
         async function initialize() {
             const interfaces = await fetchInterfaces();
-            console.log(interfaces);
             const chartObjects = {};
             interfaces.forEach((interface) => {
                 const chartId = `chart-${interface}`;
@@ -72,7 +71,7 @@
                     },
                     yaxis: {
                         min: 0,
-                        max: 5000
+                        max: 10000
                     },
                     legend: {
                         show: true,
@@ -86,32 +85,26 @@
                 chart.render();
                 chartObjects[interface] = chart;
             });
+            function get_min(arr){
+                let min = arr[0];
+                for(let i=1;i<arr.length;i++){
+                    if(arr[i] < min){
+                        min = arr[i];
+                    }
+                }
+                return min;
+            }
             function updateData() {
                 fetch('/firewalltraffic')
                     .then(response => response.json())
                     .then(data => {
-                        const currentTime = new Date().getTime();
                         Object.keys(data).forEach(interface => {
+                            const currentTime = new Date().getTime();
                             const newDataPoint = { x: currentTime, y: data[interface] };
                             const chart = chartObjects[interface];
+                            const currentSeries = chart.series.w.globals.series;
                             chart.appendData([{ data: [newDataPoint] }]);
-                            console.log(chart.series.w);
-                            //console.log(chart.w.globals);
-                            //const yValues = currentSeries.map(point => point.y);
 
-                            // Calculate new Y-axis min and max
-                            //const newMinY = Math.floor(Math.min(...yValues) * 0.9); // Add some padding below min
-                            //const newMaxY = Math.ceil(Math.max(...yValues) * 1.1);  // Add some padding above max
-
-                            // Update Y-axis dynamically
-                            /*chart.updateOptions({
-                                yaxis: {
-                                    min: newMinY,
-                                    max: newMaxY
-                                }
-                            });*/
-                            //sfdknnisf
-                            
                         });
                     })
                     .catch(error => console.error('Error fetching traffic data:', error));
