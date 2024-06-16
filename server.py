@@ -14,7 +14,7 @@ import os
 from collections import deque
 from queue import Queue
 packet_queue = Queue()
-
+cur_ip = None
 class CommandThread(threading.Thread):
     def __init__(self,interface):
         super(CommandThread, self).__init__()
@@ -52,9 +52,11 @@ def load_user(user_id):
     if user:
         return User(id=user[0], username=user[1], password=user[2])
     return None
-
-
-OPNSENSE_HOST = "http://192.168.98.131"
+conn = sqlite3.connect('users.db')
+c = conn.cursor()
+firewall_ip = c.execute('SELECT IP FROM ips').fetchone()
+conn.close()
+OPNSENSE_HOST = f"http://{firewall_ip[0]}"
 API_KEY = "jrvyX2oH6Ofqp/7BHfC+3YyBq8YTU3PkcGSKKC6XabZGWKZ9OkDkzp8kUtdsxvKTZ60aw2OtcOXUEw5E"
 API_SECRET = "bz92B/FFBOWs1CNrweoJ3iV8N4tkA8Rdf3KMfqzj9lTJ3zMOMbPbqOn9H+TMs2M8e7k2ae7vt4fbsc5x"
 auth = (API_KEY, API_SECRET)
@@ -99,6 +101,35 @@ def get_traffic_value():
 @login_required
 def add_rule():
     return render_template('add_rule.html')
+@app.route("/firewallip",methods=['GET','POST'])
+@login_required
+def edit_firewall_ip():
+    conn = sqlite3.connect('users.db')
+    c = conn.cursor()
+    if(request.method == "POST"):
+        ip = request.form["ip"]
+        c.execute('INSERT INTO ips (IP) VALUES (?)',(ip,))
+        conn.commit()
+    cur_ip = c.execute("SELECT * FROM ips").fetchall()
+    print(cur_ip)
+    conn.close()
+    return render_template("editfirewallip.html",cur_ip = cur_ip)
+@app.route("/update_firewall_ip/<int:id>",methods=['GET','POST'])
+def update_firewall_ip(id):
+    id = int(id)
+    global OPNSENSE_HOST
+    conn = sqlite3.connect('users.db')
+    c = conn.cursor()
+    firewall_ip = c.execute('SELECT IP FROM ips').fetchone()
+    if(request.method == "POST"):
+        ip = request.form["ip"]
+        c.execute('UPDATE ips SET IP = ? WHERE ID = ?',(ip,id))
+        conn.commit()
+        conn.close()
+        OPNSENSE_HOST = f"http://{ip}"
+        return redirect(url_for('edit_firewall_ip'))
+    return render_template("update_firewall_ip.html",firewall_ip = firewall_ip[0])
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -115,15 +146,20 @@ def login():
             return redirect(url_for('home'))
         flash('Invalid username or password')
     return render_template('login.html')
+
 @app.route('/logout')
 @login_required
 def logout():
     logout_user()
     return redirect(url_for('login'))
+
+
 @app.route("/adduser",methods = ["GET","POST"])
 @login_required
 def adduser():
     return render_template("adduser.html")
+
+
 @app.route("/viewlivepackets")
 @login_required
 def viewlivepackets():
