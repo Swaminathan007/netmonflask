@@ -71,7 +71,7 @@
                     },
                     yaxis: {
                         min: 0,
-                        max: 10000
+                        max: 2000
                     },
                     legend: {
                         show: true,
@@ -101,9 +101,16 @@
                         Object.keys(data).forEach(interface => {
                             const currentTime = new Date().getTime();
                             const newDataPoint = { x: currentTime, y: data[interface] };
-                            const chart = chartObjects[interface];
-                            const currentSeries = chart.series.w.globals.series;
-                            chart.appendData([{ data: [newDataPoint] }]);
+                            if(data[interface] > 2000){
+                                
+                                chartObjects[interface].updateOptions({
+                                    yaxis: {
+                                        min: 0,
+                                        max: data[interface]+100
+                                    }
+                                });
+                            }
+                            chartObjects[interface].appendData([{ data: [newDataPoint] }]);
 
                         });
                     })
